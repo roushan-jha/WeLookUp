@@ -1,0 +1,26 @@
+services:
+  # 1. MongoDB (Primary Database)
+  mongodb:
+    image: mongo:latest
+    container_name: welookup-mongodb
+    ports:
+      - "27017:27017" # Map container port to host machine
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INIT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INIT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db # Persistent storage for data
+
+  # 2. RabbitMQ (Message Broker)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: welookup-rabbitmq
+    ports:
+      - "5672:5672" # AMQP protocol (for communication)
+      - "15672:15672" # Management UI (for checking queues)
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+volumes:
+  mongodb_data: # Define the persistent volume
