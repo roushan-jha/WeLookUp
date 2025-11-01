@@ -3,6 +3,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 
+import authRoutes from './routes/authRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+
 // Import Mongoose Models (needed to ensure Mongoose knows about them)
 // We import them here, even if they aren't used directly, to ensure Mongoose registers the schemas.
 import './models/User.js'; 
@@ -56,8 +59,15 @@ app.get('/', (req, res) => {
     res.send({ message: 'API Gateway is running successfully.' });
 });
 
+// --- 4. API Routes ---
+// Prefix all auth routes with /api/v1/auth
+app.use('/api/v1/auth', authRoutes);
 
-// --- 4. Initialize Database and Start Server ---
+// Prefix all profile routes with /api/v1/profiles
+app.use('/api/v1/profiles', profileRoutes);
+
+
+// --- 5. Initialize Database and Start Server ---
 
 const startServer = async () => {
     // 1. Connect to the database first
