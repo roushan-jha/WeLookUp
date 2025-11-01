@@ -5,6 +5,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 // Import Mongoose Models (needed to ensure Mongoose knows about them)
 // We import them here, even if they aren't used directly, to ensure Mongoose registers the schemas.
@@ -65,6 +66,9 @@ app.use('/api/v1/auth', authRoutes);
 
 // Prefix all profile routes with /api/v1/profiles
 app.use('/api/v1/profiles', profileRoutes);
+
+// Prefix all review routes with /api/v1/reviews
+app.use('/api/v1/reviews', reviewRoutes);
 
 
 // --- 5. Initialize Database and Start Server ---

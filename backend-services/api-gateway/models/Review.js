@@ -1,12 +1,12 @@
 import { Schema, model } from 'mongoose';
 
 const ReviewSchema = new Schema({
-    client: { 
+    clientProfile: { 
         type: Schema.Types.ObjectId, 
         ref: 'ClientProfile', // Links to the ClientProfile
         required: true 
     },
-    reviewer: { 
+    submittedBy: { 
         type: Schema.Types.ObjectId, 
         ref: 'User', // Links to the reviewing ServiceProvider
         required: true 
