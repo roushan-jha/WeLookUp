@@ -2,6 +2,7 @@ import 'dotenv/config'; // Use /config for automatic loading in ES Modules
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import { connectMQ } from './config/rabbitmq.js';
 
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
@@ -76,6 +77,7 @@ app.use('/api/v1/reviews', reviewRoutes);
 const startServer = async () => {
     // 1. Connect to the database first
     await connectDB();
+    await connectMQ(); // Initialize RabbitMQ connection
 
     // 2. Start the Express server after a successful DB connection
     app.listen(PORT, () => {

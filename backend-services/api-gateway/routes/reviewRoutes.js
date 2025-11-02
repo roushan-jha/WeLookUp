@@ -3,6 +3,7 @@ import auth from '../middleware/auth.js';
 import Review from '../models/Review.js';
 import ClientProfile from '../models/ClientProfile.js';
 import { cloudinary, upload } from '../config/cloudinaryConfig.js';
+import { publishToQueue } from '../config/rabbitmq.js';
 
 const router = express.Router();
 
@@ -55,9 +56,15 @@ router.post('/', auth, upload.single('invoice'), async (req, res) => {
             $inc: { totalReviews: 1 } // Increment the total reviews count
         });
 
-        // NOTE: In a production system, we would publish a message to RabbitMQ here 
-        // for the 'scoring-service' to calculate the new riskScore asynchronously.
-        // For now, we return the review and move on.
+       // 4. PUBLISH TASK TO RABBITMQ (The crucial Day 4 step)
+        const verificationPayload = {
+            reviewId: newReview._id, // MongoDB ID of the newly saved review
+            invoiceUrl: newReview.invoiceUrl, // URL needed for verification service
+            clientProfileId: newReview.clientProfile // Client ID for context
+        };
+
+        // Publish to the queue defined in config/rabbitmq.js
+        await publishToQueue('verification_queue', verificationPayload);
 
         res.status(201).json({ 
             message: 'Review submitted successfully.',

@@ -22,5 +22,21 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
 
+  verification-service:
+    # Build using the Dockerfile inside the verification-service directory
+    build: 
+      context: ./backend-services/verification-service
+      dockerfile: Dockerfile
+    container_name: welookup-verification-service
+    # Restart policy is crucial for workers to maintain reliability
+    restart: always 
+    environment:
+      - NODE_ENV=production
+      # It relies on the environment variables defined in its local .env file
+    # Ensure it starts only after its dependencies are up
+    depends_on:
+      - mongodb
+      - rabbitmq
+
 volumes:
   mongodb_data: # Define the persistent volume
