@@ -1,19 +1,24 @@
-import Link from "next/link";
+import React from 'react';
+import Link from 'next/link';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
+      {/* <Header /> */}
+      
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
+        <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
                 Smart Client Risk Assessment
               </h1>
               <p className="text-xl md:text-2xl text-gray-700 mb-8 max-w-3xl mx-auto">
-                Make informed business decisions with comprehensive payment
-                history tracking and client risk evaluation
+                Make informed business decisions with comprehensive payment history 
+                tracking and client risk evaluation
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
@@ -31,6 +36,27 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* Search Icon - Floating Button */}
+          <Link
+            href="/search"
+            className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all hover:scale-110 z-50"
+            title="Search Companies"
+          >
+            <svg 
+              className="w-8 h-8" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+              />
+            </svg>
+          </Link>
         </section>
 
         {/* Features Section */}
@@ -41,7 +67,7 @@ export default function HomePage() {
                 Why Choose WeLookUp?
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Powerful features designed to help you assess client reliability
+                Powerful features designed to help you assess client reliability 
                 and minimize financial risks
               </p>
             </div>
@@ -50,77 +76,47 @@ export default function HomePage() {
               {/* Feature 1 */}
               <div className="p-6 bg-gray-50 rounded-lg hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg
-                    className="w-6 h-6 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   Risk Assessment
                 </h3>
                 <p className="text-gray-600">
-                  Advanced algorithms analyze client behavior and payment
-                  patterns to provide accurate risk scores
+                  Advanced algorithms analyze client behavior and payment patterns 
+                  to provide accurate risk scores
                 </p>
               </div>
 
               {/* Feature 2 */}
               <div className="p-6 bg-gray-50 rounded-lg hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg
-                    className="w-6 h-6 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   Payment History
                 </h3>
                 <p className="text-gray-600">
-                  Track and monitor complete payment histories to identify
-                  trends and potential issues early
+                  Track and monitor complete payment histories to identify trends 
+                  and potential issues early
                 </p>
               </div>
 
               {/* Feature 3 */}
               <div className="p-6 bg-gray-50 rounded-lg hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg
-                    className="w-6 h-6 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   Detailed Reports
                 </h3>
                 <p className="text-gray-600">
-                  Generate comprehensive reports with actionable insights for
+                  Generate comprehensive reports with actionable insights for 
                   better decision making
                 </p>
               </div>
@@ -135,8 +131,7 @@ export default function HomePage() {
               Ready to Minimize Your Business Risk?
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join hundreds of businesses that trust WeLookUp for client
-              assessment
+              Join hundreds of businesses that trust WeLookUp for client assessment
             </p>
             <Link
               href="/register"
@@ -147,6 +142,8 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      {/* <Footer /> */}
     </div>
   );
 }
