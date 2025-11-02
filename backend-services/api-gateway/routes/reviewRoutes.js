@@ -11,10 +11,10 @@ const router = express.Router();
 // @access  Private (Service Providers only)
 router.post('/', auth, upload.single('invoice'), async (req, res) => {
     // req.user is set by the auth middleware (contains id, role)
-    const { clientProfileId, paymentDelayDays, rating, reviewText } = req.body;
+    const { clientProfileId, paymentDelayDays, reviewText, qualityOfService, customerSupport, onTimeDelivery, valueForMoney, communicationResponsiveness, technicalExpertise } = req.body;
     const file = req.file; // This is the file buffer from multer
 
-    if (!clientProfileId || !paymentDelayDays || !rating || !reviewText || !file) {
+    if (!clientProfileId || !paymentDelayDays || !reviewText || !file || !qualityOfService || !customerSupport || !onTimeDelivery || !valueForMoney || !communicationResponsiveness || !technicalExpertise) {
         return res.status(400).json({ message: 'Missing required fields or invoice file.' });
     }
 
@@ -37,10 +37,15 @@ router.post('/', auth, upload.single('invoice'), async (req, res) => {
             submittedBy: req.user.id,
             clientProfile: clientProfileId,
             paymentDelayDays: parseInt(paymentDelayDays),
-            rating: parseFloat(rating),
             reviewText: reviewText,
+            qualityOfService: parseFloat(qualityOfService),
+            customerSupport: parseFloat(customerSupport),
+            onTimeDelivery: parseFloat(onTimeDelivery),
+            valueForMoney: parseFloat(valueForMoney),
+            communicationResponsiveness: parseFloat(communicationResponsiveness),
+            technicalExpertise: parseFloat(technicalExpertise),
             invoiceUrl: result.secure_url, // URL from Cloudinary
-            cloudinaryAssetId: result.public_id // ID for potential future deletion
+            cloudinaryAssetId: result.public_id, // ID for potential future deletion
         });
 
         await newReview.save();
@@ -55,8 +60,8 @@ router.post('/', auth, upload.single('invoice'), async (req, res) => {
         // For now, we return the review and move on.
 
         res.status(201).json({ 
-            message: 'Review submitted successfully. Score update pending.',
-            review: newReview 
+            message: 'Review submitted successfully.',
+            review: newReview.toObject({ virtuals: true })
         });
 
     } catch (err) {
