@@ -38,5 +38,18 @@ services:
       - mongodb
       - rabbitmq
 
+  # 4. Scorer Service (NEW MICROSERVICE for Day 5)
+  scoring-service:
+      build: 
+        context: ./backend-services/scoring-service
+        dockerfile: Dockerfile
+      container_name: welookup-scoring-service
+      restart: always
+      environment:
+        - NODE_ENV=development
+      depends_on:
+        - mongodb
+        - rabbitmq
+
 volumes:
   mongodb_data: # Define the persistent volume
