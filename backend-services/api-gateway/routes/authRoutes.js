@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js'; // Import the User model
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -92,6 +93,32 @@ router.post('/login', async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error during login');
+    }
+});
+
+router.post('/logout', (req, res) => {
+  try {
+    // For JWT, logout is handled on client side (token removal)
+    // This route just responds to confirm logout success
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error during logout');
+  }
+});
+// --- Current user route ---
+// GET /api/v1/auth/me -> returns basic user info based on token
+router.get('/me', auth, async (req, res) => {
+    try {
+        console.log('[authRoutes] GET /me called, user id from token:', req.user?.id);
+        const hasTokenHeader = !!req.header('x-auth-token');
+        console.log('[authRoutes] x-auth-token header present:', hasTokenHeader);
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json({ user });
+    } catch (err) {
+        console.error('Error in /me route:', err?.message || err);
+        res.status(500).send('Server Error fetching user');
     }
 });
 

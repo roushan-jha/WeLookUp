@@ -51,11 +51,13 @@ router.post('/', auth, async (req, res) => {
 // @access  Private
 router.get('/', auth, async (req, res) => {
     try {
+        console.log('[profileRoutes] GET /profiles called by user id:', req.user?.id);
+        console.log('[profileRoutes] x-auth-token header present:', !!req.header('x-auth-token'));
         // Find all profiles and return only essential fields for the list/dashboard view
         const profiles = await ClientProfile.find().select('companyName riskScore totalReviews isVerified');
         res.json(profiles);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error fetching profiles:', err?.message || err);
         res.status(500).send('Server Error during profile retrieval');
     }
 });
