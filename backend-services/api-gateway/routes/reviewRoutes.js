@@ -77,4 +77,35 @@ router.post('/', auth, upload.single('invoice'), async (req, res) => {
     }
 });
 
+// @route   GET api/v1/reviews/profile/:profileId
+// @desc    Get reviews for a given client profile
+// @access  Private
+router.get('/profile/:profileId', auth, async (req, res) => {
+    try {
+        const { profileId } = req.params;
+        const reviews = await Review.find({ clientProfile: profileId })
+            .populate('submittedBy', 'email name')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Attach overallRating if virtuals are not applied in lean()
+        const enriched = reviews.map(r => {
+            const ratingFields = [
+                r.qualityOfService, r.customerSupport, r.onTimeDelivery,
+                r.valueForMoney, r.communicationResponsiveness, r.technicalExpertise
+            ];
+            const allPresent = ratingFields.every(v => typeof v === 'number');
+            return {
+                ...r,
+                overallRating: allPresent ? (ratingFields.reduce((a,b) => a+b, 0) / 6).toFixed(1) : null
+            };
+        });
+
+        res.json(enriched);
+    } catch (err) {
+        console.error('Error fetching reviews:', err.message);
+        res.status(500).send('Server Error fetching reviews');
+    }
+});
+
 export default router;

@@ -38,18 +38,36 @@ services:
       - mongodb
       - rabbitmq
 
-  # 4. Scorer Service (NEW MICROSERVICE for Day 5)
+  # 4. API Gateway (Main Entry Point)
+  api-gateway:
+    build:
+      context: ./backend-services/api-gateway
+      dockerfile: Dockerfile
+    container_name: welookup-api-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGO_URI=mongodb://welookup_admin:mongo123service@mongodb:27017/welookupDB?authSource=admin
+      - RABBITMQ_URI=amqp://welookup_guest:rabbitmq456service@rabbitmq:5672
+    depends_on:
+      - mongodb
+      - rabbitmq
+
+  # 5. Scorer Service
   scoring-service:
-      build: 
-        context: ./backend-services/scoring-service
-        dockerfile: Dockerfile
-      container_name: welookup-scoring-service
-      restart: always
-      environment:
-        - NODE_ENV=development
-      depends_on:
-        - mongodb
-        - rabbitmq
+    build: 
+      context: ./backend-services/scoring-service
+      dockerfile: Dockerfile
+    container_name: welookup-scoring-service
+    restart: always
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - mongodb
+      - rabbitmq
 
 volumes:
   mongodb_data: # Define the persistent volume
