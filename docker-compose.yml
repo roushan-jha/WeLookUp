@@ -3,71 +3,77 @@ services:
   mongodb:
     image: mongo:latest
     container_name: welookup-mongodb
+    restart: always
     ports:
-      - "27017:27017" # Map container port to host machine
+      - "27017:27017"
     environment:
+      # These must match the strings used in your connection URIs
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INIT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INIT_PASSWORD}
     volumes:
-      - mongodb_data:/data/db # Persistent storage for data
+      - mongodb_data:/data/db
 
   # 2. RabbitMQ (Message Broker)
   rabbitmq:
     image: rabbitmq:3-management
     container_name: welookup-rabbitmq
+    restart: always
     ports:
-      - "5672:5672" # AMQP protocol (for communication)
-      - "15672:15672" # Management UI (for checking queues)
+      - "5672:5672" # AMQP
+      - "15672:15672" # UI
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
+  # 3. Verification Service
   verification-service:
-    # Build using the Dockerfile inside the verification-service directory
-    build: 
+    build:
       context: ./backend-services/verification-service
-      dockerfile: Dockerfile
     container_name: welookup-verification-service
-    # Restart policy is crucial for workers to maintain reliability
-    restart: always 
-    environment:
-      - NODE_ENV=production
-      # It relies on the environment variables defined in its local .env file
-    # Ensure it starts only after its dependencies are up
+    restart: always
+    env_file:
+      - ./backend-services/verification-service/.env
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
-  # 4. API Gateway (Main Entry Point)
+  # 4. API Gateway
   api-gateway:
     build:
       context: ./backend-services/api-gateway
-      dockerfile: Dockerfile
     container_name: welookup-api-gateway
     restart: always
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - MONGO_URI=mongodb://welookup_admin:mongo123service@mongodb:27017/welookupDB?authSource=admin
-      - RABBITMQ_URI=amqp://welookup_guest:rabbitmq456service@rabbitmq:5672
+      - "8000:8000"
+    env_file:
+      - ./backend-services/api-gateway/.env
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
-  # 5. Scorer Service
+  # 5. Scoring Service
   scoring-service:
-    build: 
+    build:
       context: ./backend-services/scoring-service
-      dockerfile: Dockerfile
     container_name: welookup-scoring-service
     restart: always
-    environment:
-      - NODE_ENV=development
+    env_file:
+      - ./backend-services/scoring-service/.env
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
-  mongodb_data: # Define the persistent volume
+  mongodb_data:

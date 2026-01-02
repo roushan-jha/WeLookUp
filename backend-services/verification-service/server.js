@@ -1,114 +1,142 @@
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import amqp from 'amqplib';
-import { publishToQueue, initChannel } from './rabbitmq.js';
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import amqp from "amqplib";
+import { publishToQueue, initChannel } from "./config/rabbitmq.js";
 
 dotenv.config();
 
 // ----------------------------------------------------
-// Mongoose Model (MUST be exactly the same as in API Gateway)
-// For simplicity, we define a minimal version here, but in production, 
-// we would share a common package.
+// Mongoose Model (Refined for Cross-Org Check)
+// ----------------------------------------------------
 const ReviewSchema = new mongoose.Schema({
-    verificationStatus: { type: String, enum: ['PENDING', 'VERIFIED', 'MANUAL_REVIEW', 'REJECTED'] },
-    invoiceUrl: { type: String },
-    // We only need the ID and the status for this service, but we use a full model
-    // to interact with the existing collection.
+  verificationStatus: {
+    type: String,
+    enum: ["PENDING", "VERIFIED", "MANUAL_REVIEW", "REJECTED"],
+  },
+  invoiceUrl: { type: String },
+  invoiceNumber: { type: String },
 });
-const Review = mongoose.model('Review', ReviewSchema, 'reviews'); // Note the explicit collection name 'reviews'
+const Review = mongoose.model("Review", ReviewSchema, "reviews");
 // ----------------------------------------------------
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const RABBITMQ_URL = process.env.RABBITMQ_URI;
-const QUEUE_NAME = 'verification_queue';
+const QUEUE_NAME = "verification_queue";
 
 const connectDB = async () => {
-    try {
-        await mongoose.connect(MONGODB_URI);
-        console.log("✅ Verification Service connected to MongoDB.");
-    } catch (error) {
-        console.error("❌ MongoDB connection error:", error.message);
-        process.exit(1);
-    }
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log("✅ Verification Service connected to MongoDB.");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error.message);
+    process.exit(1);
+  }
 };
 
 const startConsumer = async () => {
-    let connection;
-    let channel;
-    const maxRetries = 10;
-    let retries = 0;
+  let channel;
+  const maxRetries = 10;
+  let retries = 0;
 
-    // NEW: Connection Loop with Retries 
-    while (!channel && retries < maxRetries) {
-        try {
-            console.log(`[MQ] Attempting to connect to RabbitMQ (Attempt ${retries + 1}/${maxRetries})...`);
-            connection = await amqp.connect(RABBITMQ_URL);
-            channel = await connection.createChannel();
-
-            await initChannel(channel);
-            
-            break; // Success! Exit loop
-        } catch (error) {
-            retries++;
-            if (retries >= maxRetries) {
-                console.error("❌ RabbitMQ connection failed after maximum retries. Exiting service.");
-                process.exit(1);
-            }
-            // Wait 3 seconds before the next retry
-            await new Promise(resolve => setTimeout(resolve, 3000));
-        }
-    }
-
-    // --- Start consuming ONLY after a channel is established ---
-    if (!channel) return; 
-
+  while (!channel && retries < maxRetries) {
     try {
-        await channel.assertQueue(QUEUE_NAME, { durable: true });
-        console.log(`✅ Listening for messages in ${QUEUE_NAME}. To exit, press CTRL+C.`);
+      console.log(
+        `[MQ] Attempting to connect... (${retries + 1}/${maxRetries})`
+      );
 
-        channel.consume(QUEUE_NAME, async (msg) => {
-            if (msg !== null) {
-                const payload = JSON.parse(msg.content.toString());
-                const { reviewId, invoiceUrl, clientProfileId } = payload;
+      // Use our new logic
+      const connection = await amqp.connect(process.env.RABBITMQ_URI);
+      channel = await connection.createChannel();
 
-                console.log(`[JOB] Processing Review ID: ${reviewId} (URL: ${invoiceUrl})`);
+      // CALL THE EXPORTED FUNCTION
+      await initChannel(channel);
 
-                // --- 1. SIMULATE Verification Logic ---
-                await new Promise(resolve => setTimeout(resolve, 5000));
-
-                const verificationResult = { status: 'VERIFIED', score: 98 }; 
-
-                // --- 2. Update Database ---
-                if (verificationResult.status === 'VERIFIED') {
-                    await Review.findByIdAndUpdate(reviewId, {
-                        verificationStatus: 'VERIFIED'
-                    });
-                    console.log(`[DONE] Review ${reviewId} successfully verified and status updated.`);
-
-                    const scoringPayload = {
-                        reviewId: reviewId,
-                        clientProfileId: clientProfileId,
-                        verificationStatus: 'VERIFIED',
-                        // Note: For full scoring, the Scorer Service will fetch the entire Review record
-                    };
-
-                    await publishToQueue('scoring_queue', scoringPayload);
-                }
-                channel.ack(msg);
-            }
-        }, {
-            noAck: false
-        });
-
+      console.log("✅ Verification Worker Ready.");
+      break;
     } catch (error) {
-        // This catch handles errors during consume/assert, not initial connection
-        console.error("❌ RabbitMQ consumer failed:", error.message); 
+      retries++;
+      await new Promise((res) => setTimeout(res, 3000));
     }
+  }
+
+  if (!channel) return;
+
+  try {
+    await channel.assertQueue(QUEUE_NAME, { durable: true });
+    console.log(`✅ Listening for messages in ${QUEUE_NAME}.`);
+
+    channel.consume(QUEUE_NAME, async (msg) => {
+      if (msg !== null) {
+        const payload = JSON.parse(msg.content.toString());
+
+        // 1. Destructure with default values or validation
+        const {
+          reviewId,
+          invoiceNumber,
+          reviewerDomain,
+          targetDomain,
+          clientProfileId, // Ensure this matches what Gateway sends
+        } = payload;
+
+        console.log(`[JOB] Auditing Review: ${reviewId}`);
+
+        try {
+          // 2. Fetch the actual Review to ensure data integrity
+          const reviewDoc = await Review.findById(reviewId);
+
+          if (!reviewDoc) {
+            console.error(`❌ Review ${reviewId} not found in DB.`);
+            return channel.ack(msg);
+          }
+
+          // 3. Logic: Anti-Fraud & Invoice Check (Your existing logic is good)
+          if (reviewerDomain === targetDomain) {
+            reviewDoc.verificationStatus = "REJECTED";
+            await reviewDoc.save();
+            console.log(`🚫 REJECTED: Internal review.`);
+            return channel.ack(msg);
+          }
+
+          // SIMULATE OCR/GST CHECK
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          const isInvoiceLegit =
+            invoiceNumber && !invoiceNumber.startsWith("FAKE");
+
+          if (isInvoiceLegit) {
+            // --- UPDATE DATABASE ---
+            reviewDoc.verificationStatus = "VERIFIED";
+            await reviewDoc.save();
+
+            console.log(`✅ VERIFIED: Review ${reviewId}`);
+
+            // --- SIGNAL SCORING SERVICE ---
+            // USE STRINGS: This prevents ObjectID serialization issues in RabbitMQ
+            const scoringPayload = {
+              reviewId: reviewId.toString(),
+              clientProfileId: clientProfileId.toString(),
+              status: "VERIFIED",
+            };
+
+            await publishToQueue("scoring_queue", scoringPayload);
+          } else {
+            reviewDoc.verificationStatus = "MANUAL_REVIEW";
+            await reviewDoc.save();
+          }
+
+          channel.ack(msg);
+        } catch (dbError) {
+          console.error("❌ DB/Logic Error:", dbError.message);
+          channel.nack(msg, false, true);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("❌ RabbitMQ consumer failed:", error.message);
+  }
 };
 
-const runService = async () => {
-    await connectDB();
-    await startConsumer();
+const run = async () => {
+  await mongoose.connect(process.env.MONGODB_URI);
+  await startConsumer();
 };
-
-runService();
+run();
