@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ToastProvider";
 import { isAxiosError } from "axios";
 
 const RegisterPage = () => {
@@ -20,7 +21,27 @@ const RegisterPage = () => {
   const [success, setSuccess] = useState<boolean>(false);
 
   // Handle Form Submission
-  const { register } = useAuth();
+  const { register, isAuthenticated } = useAuth();
+  const toast = useToast();
+
+  // If already authenticated redirect to dashboard and avoid rendering the form
+  useEffect(() => {
+    if (isAuthenticated) {
+      try {
+        router.replace("/dashboard");
+      } catch {
+        router.push("/dashboard");
+      }
+    }
+  }, [isAuthenticated, router]);
+
+  if (isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600">Redirecting...</p>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,7 +60,7 @@ const RegisterPage = () => {
 
       setSuccess(true);
       console.log("Registration successful!");
-      alert("Registration Successful! Redirecting to dashboard.");
+      toast.success("Registration successful");
 
       // Clear sensitive inputs
       setName("");
@@ -57,7 +78,10 @@ const RegisterPage = () => {
         setError(errorMessage);
         console.error("Registration API Error:", errorMessage);
       } else {
-        setError((err as Error).message || "A network error occurred. Check your connection.");
+        setError(
+          (err as Error).message ||
+            "A network error occurred. Check your connection.",
+        );
         console.error("Unknown Error:", err);
       }
     } finally {
@@ -66,11 +90,9 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-lg rounded-lg">
-        <h2 className="text-2xl font-bold text-center">
-          Register New Account
-        </h2>
+        <h2 className="text-2xl font-bold text-center">Register New Account</h2>
 
         {/* Feedback Messages */}
         {error && <p className="text-center text-red-500 text-sm">{error}</p>}

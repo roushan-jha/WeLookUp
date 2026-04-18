@@ -1,7 +1,6 @@
 import React from 'react';
-import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+// actions are rendered client-side
+import HeroActions from '@/components/HeroActions';
 
 export default function HomePage() {
   return (
@@ -20,43 +19,11 @@ export default function HomePage() {
                 Make informed business decisions with comprehensive payment history 
                 tracking and client risk evaluation
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/register"
-                  className="px-8 py-3 text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-lg"
-                >
-                  Get Started Free
-                </Link>
-                <Link
-                  href="/learn-more"
-                  className="px-8 py-3 text-lg font-medium text-blue-600 bg-white hover:bg-gray-50 rounded-lg transition-colors shadow-lg"
-                >
-                  Learn More
-                </Link>
+              <div className="mt-6">
+                <HeroActions />
               </div>
             </div>
           </div>
-
-          {/* Search Icon - Floating Button */}
-          <Link
-            href="/search"
-            className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all hover:scale-110 z-50"
-            title="Search Companies"
-          >
-            <svg 
-              className="w-8 h-8" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-              />
-            </svg>
-          </Link>
         </section>
 
         {/* Features Section */}
@@ -133,12 +100,6 @@ export default function HomePage() {
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
               Join hundreds of businesses that trust WeLookUp for client assessment
             </p>
-            <Link
-              href="/register"
-              className="inline-block px-8 py-3 text-lg font-medium text-blue-600 bg-white hover:bg-gray-100 rounded-lg transition-colors shadow-lg"
-            >
-              Start Your Free Trial
-            </Link>
           </div>
         </section>
       </main>
