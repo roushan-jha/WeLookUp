@@ -1,9 +1,10 @@
 import ProfileClient from "./ProfileClient";
 
 type Props = {
-  params: { id: string };
+  params: { id: string } | Promise<{ id: string }>;
 };
 
-export default function ProfilePage({ params }: Props) {
-  return <ProfileClient id={params.id} />;
+export default async function ProfilePage({ params }: Props) {
+  const p = (await params) as { id: string };
+  return <ProfileClient id={p.id} />;
 }

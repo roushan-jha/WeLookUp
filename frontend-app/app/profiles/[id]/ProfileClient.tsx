@@ -116,6 +116,8 @@ export default function ProfileClient({ id }: { id?: string }) {
   const [invoice, setInvoice] = useState<File | null>(null);
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,6 +227,79 @@ export default function ProfileClient({ id }: { id?: string }) {
     return (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   })();
 
+  // Simple client-side sentiment helper (lightweight, offline)
+  const generateSummary = async () => {
+    if (generatingSummary) return;
+    setGeneratingSummary(true);
+    try {
+      // Prefer server-side sentiment if available
+      if (resolvedId) {
+        try {
+          const srv = await api.get(`/profiles/${resolvedId}/sentiment`);
+          if (srv?.data) {
+            const d = srv.data;
+            const label = d.summary || `${d.ratingLabel ?? ""} ${d.textLabel ?? ""}`;
+            setSummary(label);
+            setGeneratingSummary(false);
+            return;
+          }
+        } catch (err) {
+          // ignore and fall back to client-side
+          console.warn("Server sentiment failed, falling back to client heuristic", err);
+        }
+      }
+      // Average rating based label
+      const avg = (reviews
+        .map((r) => Number(r.overallRating ?? 0))
+        .filter((v) => v > 0)
+        .reduce((s, v) => s + v, 0) / Math.max(1, reviews.filter((r) => Number(r.overallRating ?? 0) > 0).length));
+
+      let ratingLabel = "No ratings";
+      if (!isNaN(avg)) {
+        if (avg >= 4.5) ratingLabel = "Overwhelmingly Positive";
+        else if (avg >= 4) ratingLabel = "Mostly Positive";
+        else if (avg >= 3) ratingLabel = "Mixed";
+        else if (avg >= 2) ratingLabel = "Mostly Negative";
+        else ratingLabel = "Overwhelmingly Negative";
+      }
+
+      // Basic text sentiment using small lexicon
+      const pos = new Set(["good", "great", "excellent", "positive", "reliable", "recommend", "fast", "professional", "trust"]);
+      const neg = new Set(["bad", "poor", "late", "delay", "unreliable", "fraud", "scam", "late", "slow"]);
+      let textScore = 0;
+      let texts = 0;
+      for (const r of reviews) {
+        if (!r.reviewText) continue;
+        texts++;
+        const toks = r.reviewText.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+        let s = 0;
+        for (const t of toks) {
+          if (pos.has(t)) s += 1;
+          if (neg.has(t)) s -= 1;
+        }
+        textScore += Math.sign(s);
+      }
+      const textLabel = texts === 0 ? "No text reviews" : textScore / Math.max(1, texts) >= 0.5 ? "Positive" : textScore / Math.max(1, texts) >= 0 ? "Mixed" : "Negative";
+
+  const combined = ratingsAndTextToLabel(ratingLabel, textLabel);
+  setSummary(`${combined} (ratings: ${ratingLabel}, text: ${textLabel})`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate summary");
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
+  function ratingsAndTextToLabel(rLabel: string, tLabel: string) {
+    if (rLabel === "No ratings" && tLabel === "No text reviews") return "No data to summarize";
+    if (rLabel.includes("Overwhelmingly") && tLabel === "Positive") return "Overwhelmingly Positive";
+    if (rLabel.includes("Mostly Positive") && (tLabel === "Positive" || tLabel === "Mixed")) return "Mostly Positive";
+    if (rLabel === "Mixed" || tLabel === "Mixed") return "Mixed";
+    if (rLabel.includes("Negative") || tLabel === "Negative") return "Mostly Negative";
+    return rLabel;
+  }
+
   const perfMetrics: Record<string, number> = (stats?.performanceMetrics ??
     {}) as Record<string, number>;
   const payAnalytics: Record<string, unknown> = (stats?.paymentAnalytics ??
@@ -329,6 +404,21 @@ export default function ProfileClient({ id }: { id?: string }) {
                   <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     Verified
                   </div>
+                  <div className="ml-4">
+                    <button
+                      type="button"
+                      onClick={generateSummary}
+                      disabled={generatingSummary}
+                      className={`ml-2 px-3 py-1 text-sm rounded ${generatingSummary ? "bg-gray-200 text-gray-600 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+                    >
+                      {generatingSummary ? "Generating…" : "Generate Summary"}
+                    </button>
+                  </div>
+                  {summary && (
+                    <div className="ml-4 px-3 py-1 bg-white rounded shadow-sm text-sm">
+                      <strong>Summary:</strong> {summary}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -755,8 +845,9 @@ export default function ProfileClient({ id }: { id?: string }) {
                           onChange={(e) =>
                             setInvoice(e.target.files?.[0] ?? null)
                           }
-                          className="hidden"
+                          className="sr-only"
                           aria-required="true"
+                          aria-describedby="invoice-help"
                           required
                         />
                         <label
@@ -786,7 +877,7 @@ export default function ProfileClient({ id }: { id?: string }) {
                           )}
                         </label>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p id="invoice-help" className="text-xs text-gray-500 mt-1">
                         Accepted: PNG/JPG/PDF. Max file size enforced by server.
                       </p>
                     </div>
