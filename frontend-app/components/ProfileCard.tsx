@@ -11,46 +11,57 @@ type Profile = {
 };
 
 export default function ProfileCard({ profile }: { profile: Profile }) {
+  const initials = profile.companyName
+    .split(" ")
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join("");
+
+  // risk color
+  const rawRisk = profile.riskScore ?? null;
+  const hasReviews = (profile.totalReviews ?? 0) > 0;
+  // if no reviews, risk is considered NA
+  const risk = hasReviews ? rawRisk : null;
+  // high = green, medium = yellow, low = red
+  const riskColor =
+    risk === null
+      ? "bg-gray-200 text-gray-700"
+      : risk >= 75
+      ? "bg-green-100 text-green-800"
+      : risk >= 50
+      ? "bg-yellow-100 text-yellow-800"
+      : "bg-red-100 text-red-800";
+
   return (
     <Link href={`/profiles/${profile._id}`} className="block" aria-label={`View ${profile.companyName} details`}>
-      <div className="p-6 bg-gray-50 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-white border border-gray-100">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">{profile.companyName}</h3>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Risk Score</div>
-                  <div className="text-lg font-medium text-gray-900">{profile.riskScore ?? "—"}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Reviews</div>
-                  <div className="text-lg font-medium text-gray-900">{profile.totalReviews ?? 0}</div>
-                </div>
-              </div>
+      <div className="p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-14 h-14 rounded-lg bg-blue-50 flex items-center justify-center text-xl font-semibold text-blue-700">{initials}</div>
+          </div>
+
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900">{profile.companyName}</h3>
+
+            <div className="mt-4 flex items-center gap-4">
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${riskColor}`}>Risk: {risk === null ? "NA" : risk}</div>
+
+              <div className="text-sm text-gray-600">Reviews: <span className="font-medium text-gray-900">{profile.totalReviews ?? 0}</span></div>
+
+              {profile.isVerified && (
+                <div className="ml-auto text-sm font-medium px-3 py-1 rounded-full bg-green-100 text-green-800">Verified</div>
+              )}
             </div>
           </div>
-          
-          <span
-            className={`text-sm font-medium px-3 py-1 rounded-full ${
-              profile.isVerified ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {profile.isVerified ? "Verified" : "Unverified"}
-          </span>
+        </div>
+
+        <div className="mt-4">
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-2 rounded-full ${risk === null ? 'bg-gray-300' : risk >= 75 ? 'bg-green-500' : risk >=50 ? 'bg-yellow-400' : 'bg-red-500'}`}
+              style={{ width: `${risk === null ? 0 : Math.min(Math.max(risk ?? 0, 0), 100)}%` }}
+            />
+          </div>
         </div>
       </div>
     </Link>

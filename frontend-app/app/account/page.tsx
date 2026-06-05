@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import api from "@/lib/api";
 
 type User = {
   _id?: string;
   email?: string;
   role?: string;
+  name?: string;
+  domain?: string;
 };
 
 export default function AccountPage() {
@@ -17,33 +20,25 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!token) return;
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000/api/v1";
     let mounted = true;
     setLoading(true);
-  (async () => {
+    (async () => {
       try {
-    const { fetchWithTimeout } = await import("../../utils/fetchWithTimeout");
-  const res = await fetchWithTimeout(`${API_BASE}/auth/me`, { headers: { "x-auth-token": token } }, 30000);
-        const json = await res.json().catch(() => null);
-        if (!res.ok) {
-          const msg = json?.message || `Failed to fetch user: ${res.status}`;
-          // If token is invalid or user not found, logout and redirect to login
-          if (res.status === 401 || res.status === 404) {
-            await logout();
-            return;
-          }
-          throw new Error(msg);
-        }
-
+        const res = await api.get(`/auth/me`);
         if (!mounted) return;
-        setUser(json.user || json);
+        setUser(res.data?.user || res.data);
       } catch (err: unknown) {
         const maybeName = (err as unknown as { name?: string })?.name;
-        if (maybeName === 'AbortError') {
-          setError('Request timed out — please try again');
+        if (maybeName === "AbortError") {
+          setError("Request timed out — please try again");
         } else {
           setError((err as Error)?.message || String(err));
         }
+        // on 401/404, force logout
+        try {
+          // call logout; prefix with void to avoid floating-promise lint
+          void logout();
+        } catch {}
       } finally {
         if (mounted) setLoading(false);
       }
@@ -62,7 +57,9 @@ export default function AccountPage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Account</h1>
       <div className="p-4 border rounded">
+        <div className="mb-2"><strong>Name:</strong> {user?.name}</div>
         <div className="mb-2"><strong>Email:</strong> {user?.email}</div>
+        <div className="mb-2"><strong>Domain:</strong> {user?.domain}</div>
         <div className="mb-2"><strong>Role:</strong> {user?.role}</div>
         <div className="mb-2"><strong>ID:</strong> {user?._id}</div>
       </div>
