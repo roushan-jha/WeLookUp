@@ -77,7 +77,7 @@ router.post("/", auth, async (req, res) => {
       profile = await ClientProfile.findOneAndUpdate(
         { _id: profile._id },
         { $set: profileFields },
-        { new: true }
+        { new: true },
       );
       return res.json({ message: "Profile updated successfully", profile });
     }
@@ -198,7 +198,7 @@ router.get("/:id/stats", async (req, res) => {
         onTimeDelivery: Number(result.avgDelivery.toFixed(1)),
         valueForMoney: Number(result.avgValue.toFixed(1)),
         communicationResponsiveness: Number(
-          result.avgResponsiveness.toFixed(1)
+          result.avgResponsiveness.toFixed(1),
         ),
         technicalExpertise: Number(result.avgTechnical.toFixed(1)),
       },
@@ -210,6 +210,148 @@ router.get("/:id/stats", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// @route   GET api/v1/profiles/:id/sentiment
+// @desc    On-demand sentiment summary (ratings + simple text analysis)
+router.get("/:id/sentiment", async (req, res) => {
+  try {
+    const { id } = req.params;
+    let profileId;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      profileId = id;
+    } else {
+      const profile = await ClientProfile.findOne({ clientId: id });
+      if (!profile)
+        return res.status(404).json({ message: "Profile not found" });
+      profileId = profile._id;
+    }
+
+    // Fetch verified reviews
+    const reviews = await Review.find({
+      clientProfile: profileId,
+      verificationStatus: "VERIFIED",
+    })
+      .select(
+        "reviewText qualityOfService customerSupport onTimeDelivery valueForMoney communicationResponsiveness technicalExpertise paymentDelayDays",
+      )
+      .lean();
+
+    if (!reviews || reviews.length === 0) {
+      return res.json({
+        summary: "No data to summarize",
+        ratingLabel: "No ratings",
+        textLabel: "No text reviews",
+      });
+    }
+
+    // Compute average rating across defined numeric fields
+    const ratingFields = [
+      "qualityOfService",
+      "customerSupport",
+      "onTimeDelivery",
+      "valueForMoney",
+      "communicationResponsiveness",
+      "technicalExpertise",
+    ];
+
+    let total = 0;
+    let count = 0;
+    for (const r of reviews) {
+      let sum = 0;
+      let n = 0;
+      for (const f of ratingFields) {
+        const v = Number(r[f] ?? NaN);
+        if (!Number.isNaN(v) && v > 0) {
+          sum += v;
+          n += 1;
+        }
+      }
+      if (n > 0) {
+        total += sum / n;
+        count += 1;
+      }
+    }
+    const avg = count > 0 ? total / count : 0;
+
+    let ratingLabel = "No ratings";
+    if (!Number.isNaN(avg) && count > 0) {
+      if (avg >= 4.5) ratingLabel = "Overwhelmingly Positive";
+      else if (avg >= 4) ratingLabel = "Mostly Positive";
+      else if (avg >= 3) ratingLabel = "Mixed";
+      else if (avg >= 2) ratingLabel = "Mostly Negative";
+      else ratingLabel = "Overwhelmingly Negative";
+    }
+
+    // Basic text sentiment lexicon
+    const pos = new Set([
+      "good",
+      "great",
+      "excellent",
+      "positive",
+      "reliable",
+      "recommend",
+      "fast",
+      "professional",
+      "trust",
+    ]);
+    const neg = new Set([
+      "bad",
+      "poor",
+      "late",
+      "delay",
+      "unreliable",
+      "fraud",
+      "scam",
+      "slow",
+    ]);
+    let textScore = 0;
+    let texts = 0;
+    for (const r of reviews) {
+      if (!r.reviewText) continue;
+      texts++;
+      const toks = String(r.reviewText)
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter(Boolean);
+      let s = 0;
+      for (const t of toks) {
+        if (pos.has(t)) s += 1;
+        if (neg.has(t)) s -= 1;
+      }
+      textScore += Math.sign(s);
+    }
+    const textLabel =
+      texts === 0
+        ? "No text reviews"
+        : textScore / Math.max(1, texts) >= 0.5
+          ? "Positive"
+          : textScore / Math.max(1, texts) >= 0
+            ? "Mixed"
+            : "Negative";
+
+    // Combine
+    let combined = ratingLabel;
+    if (ratingLabel === "No ratings" && textLabel === "No text reviews")
+      combined = "No data to summarize";
+    else if (ratingLabel.includes("Overwhelmingly") && textLabel === "Positive")
+      combined = "Overwhelmingly Positive";
+    else if (
+      ratingLabel.includes("Mostly Positive") &&
+      (textLabel === "Positive" || textLabel === "Mixed")
+    )
+      combined = "Mostly Positive";
+    else if (ratingLabel === "Mixed" || textLabel === "Mixed")
+      combined = "Mixed";
+    else if (ratingLabel.includes("Negative") || textLabel === "Negative")
+      combined = "Mostly Negative";
+
+    return res.json({ summary: combined, ratingLabel, textLabel });
+  } catch (err) {
+    console.error("❌ Sentiment error:", err?.message || err);
+    res.status(500).json({ error: "Server Error computing sentiment" });
   }
 });
 
